@@ -182,10 +182,10 @@ def process_afl_test_cases(cargs):
                 ### for the current AFL test case file
                 if run_once:
                     run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
-                            cov_paths['log_file'], cargs, NO_OUTPUT)
+                            cov_paths['log_file'], cargs, NO_OUTPUT, ts=1)
                 else:
                     out_lines = run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
-                            cov_paths['log_file'], cargs, WANT_OUTPUT)[1]
+                            cov_paths['log_file'], cargs, WANT_OUTPUT, ts=1)[1]
                     run_once = True
 
                 if cargs.afl_queue_id_limit \
@@ -690,7 +690,7 @@ def get_running_pid(stats_file, pid_re):
                 break
     return pid
 
-def run_cmd(cmd, log_file, cargs, collect):
+def run_cmd(cmd, log_file, cargs, collect, ts = 5):
 
     out = []
 
@@ -707,8 +707,11 @@ def run_cmd(cmd, log_file, cargs, collect):
     else:
         fh = open(os.devnull, 'w')
 
-    es = subprocess.call(cmd, stdin=None,
-            stdout=fh, stderr=subprocess.STDOUT, shell=True, timeout=10)
+    try:
+        es = subprocess.call(cmd, stdin=None, stdout=fh, stderr=subprocess.STDOUT, shell=True, timeout=ts)
+    except subprocess.TimeoutExpired:
+        es = None
+        print("Timeout for CMD: %s" % cmd)
 
     fh.close()
 
@@ -718,8 +721,7 @@ def run_cmd(cmd, log_file, cargs, collect):
             for line in f:
                 out.append(line.rstrip('\n'))
         os.unlink(fh.name)
-
-    if (es != 0) and (collect == LOG_ERRORS or collect == WANT_OUTPUT):
+    if (es is not None and es != 0) and (collect == LOG_ERRORS or collect == WANT_OUTPUT):
         if log_file:
             logr("    Non-zero exit status '%d' for CMD: %s" % (es, cmd),
                     log_file, cargs)
