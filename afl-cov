@@ -217,7 +217,7 @@ def process_afl_test_cases(cargs):
 
                     if cargs.cov_all:
                         rate, posNum, zeroNum = compute_cov_rate(cov_paths, cargs)
-                        with open(cov_paths['data_plot'], a+) as df:
+                        with open(cov_paths['data_plot'], 'a+') as df:
                             plot_line = "%f, %f, %d, %d \n" % time.time(), rate, posNum, zeroNum
                             df.write(plot_line)
                     ### log the output of the very first coverage command to
@@ -462,7 +462,7 @@ def cov_init(cfile, cov):
             cov[k][cfile]['line'] = {}
     return
 
-def compute_cov_rate(cov_paths, cargs){
+def compute_cov_rate(cov_paths, cargs):
     cov = extract_coverage(cov_paths['lcov_info_final'], cov_paths['log_file'], cargs)
     zeroNum = float(0)
     posNum = float(0)
@@ -472,7 +472,7 @@ def compute_cov_rate(cov_paths, cargs){
         posNum += len(dic['line'])
     rate = posNum / (posNum + zeroNum)
     return rate, posNum, zeroNum
-}
+
 
 def extract_coverage(lcov_file, log_file, cargs):
 
@@ -842,7 +842,9 @@ def init_tracking(cov_paths, cargs):
                 + " --output-file " \
                 + cov_paths['lcov_base'], \
                 cov_paths['log_file'], cargs, LOG_ERRORS)
-
+    if cargs.cov_all:
+        with open(cov_paths['data_plot'], 'w') as fp:
+            fp.write("# unix_time, cov_rate, pos_lines, zero_lines")
     return True
 
 ### credit:
