@@ -37,7 +37,8 @@ import string
 import argparse
 import time
 import signal
-import sys, os
+import sys
+import os
 import threading
 
 try:
@@ -181,14 +182,12 @@ def process_afl_test_cases(cargs):
 
                 ### execute the command to generate code coverage stats
                 ### for the current AFL test case file
+                cmd = cargs.coverage_cmd.replace('AFL_FILE', f)
                 if run_once:
-                    run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
-                            cov_paths['log_file'], cargs, NO_OUTPUT, ts=2)
+                    run_cmd(cmd, cov_paths['log_file'], cargs, NO_OUTPUT, ts=2)
                 else:
-                    out_lines = run_cmd(cargs.coverage_cmd.replace('AFL_FILE', f),
-                            cov_paths['log_file'], cargs, WANT_OUTPUT, ts=2)[1]
+                    out_lines = run_cmd(cmd, cov_paths['log_file'], cargs, WANT_OUTPUT, ts=2)[1]
                     run_once = True
-
                 if cargs.afl_queue_id_limit \
                         and num_files >= cargs.afl_queue_id_limit - 1:
                     logr("[+] queue/ id limit of %d reached..." \
@@ -217,10 +216,12 @@ def process_afl_test_cases(cargs):
 
                     if cargs.cov_all:
                         rate, posNum, zeroNum = compute_cov_rate(cov_paths, cargs)
-                        with open(cov_paths['data_plot'], 'a+') as df:
-                            seed_time = 
-                            plot_line = "%s, %f, %d, %d \n" % (seed_time, rate, posNum, zeroNum)
-                            df.write(plot_line)
+                        seed_name = os.path.basename(f)
+                        if 'time' in seed_name:
+                            seed_time = seed_name.split(',')[2].rpartition(':')[-1].strip()
+                            with open(cov_paths['data_plot'], 'a+') as df:
+                                plot_line = "%s, %f, %d, %d \n" % (seed_time, rate, posNum, zeroNum)
+                                df.write(plot_line)
                     ### log the output of the very first coverage command to
                     ### assist in troubleshooting
                     if len(out_lines):
@@ -714,6 +715,15 @@ def get_running_pid(stats_file, pid_re):
                 break
     return pid
 
+def abort_cmd(cmd):
+    proc = subprocess.Popen('ps aux', stdout=subprocess.PIPE, shell=True)
+    results = proc.stdout.read().split('\n')
+    for line in results:
+        if len(line.split()) > 1:
+            if line.split()[-1] == cmd:
+                pid = line.split()[1]
+                os.system("kill -9 %s" % pid)
+
 def run_cmd(cmd, log_file, cargs, collect, ts = 5):
 
     out = []
@@ -732,15 +742,15 @@ def run_cmd(cmd, log_file, cargs, collect, ts = 5):
         fh = open(os.devnull, 'w')
 
     proc = subprocess.Popen(cmd, stdin=None, stdout=fh, stderr=subprocess.STDOUT, shell=True)
-    timer = threading.Timer(ts, proc.kill)
+    timer = threading.Timer(ts, abort_cmd, args=(cmd.split(' < ')[0],))
     try:
         timer.start()
-        proc.wait()
+        proc.communicate()
     finally:
         timer.cancel()
+
     es = proc.returncode
     fh.close()
-
     if cargs.disable_cmd_redirection or collect == WANT_OUTPUT \
             or collect == LOG_ERRORS:
         with open(fh.name, 'r') as f:
