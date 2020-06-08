@@ -215,12 +215,16 @@ def process_afl_test_cases(cargs):
                         gen_web_cov_report(fuzz_dir, cov_paths, cargs)
 
                     if cargs.cov_all:
-                        rate, posNum, zeroNum = compute_cov_rate(cov_paths, cargs)
+                        posNum, zeroNum, src_posNum, src_zeroNum, lib_posNum, lib_zeroNum = compute_cov_rate(cov_paths, cargs)
                         seed_name = os.path.basename(f)
                         if 'time' in seed_name:
-                            seed_time = seed_name.split(',')[2].rpartition(':')[-1].strip()
+                            seed_info = seed_name.split(',')
+                            seed_time = seed_info[2].rpartition(':')[-1].strip()
+                            for info in seed_info:
+                                if 'time' in info:
+                                    seed_time = info.rpartition(':')[-1].strip()
                             with open(cov_paths['data_plot'], 'a+') as df:
-                                plot_line = "%s, %f, %d, %d \n" % (seed_time, rate, posNum, zeroNum)
+                                plot_line = "%s, %d, %d, %d, %d, %d, %d \n" % (seed_time, posNum, zeroNum, src_posNum, src_zeroNum, lib_posNum, lib_zeroNum)
                                 df.write(plot_line)
                     ### log the output of the very first coverage command to
                     ### assist in troubleshooting
@@ -468,17 +472,33 @@ def compute_cov_rate(cov_paths, cargs):
     cov = extract_coverage(cov_paths['lcov_info_final'], cov_paths['log_file'], cargs)
     zeroNum = 0.0
     posNum = 0.0
+    src_zeroNum = 0.0
+    src_posNum = 0.0
+    lib_zeroNum = 0.0
+    lib_posNum = 0.0
     if 'zero'in cov:
         for (file, dic) in cov['zero'].items():
             zeroNum += len(dic['line'])
+            dirs = os.path.dirname(file).split('/')
+            for d in dirs:
+                if d == 'src':
+                    src_zeroNum += len(dic['line'])
+                    break
+                if d == 'lib':
+                    lib_zeroNum += len(dic['line'])
+                    break
     if 'pos' in cov:
         for (file, dic) in cov['pos'].items():
             posNum += len(dic['line'])
-    if posNum + zeroNum > 0:
-        rate = posNum / (posNum + zeroNum)
-    else:
-        rate = 0.0
-    return rate, posNum, zeroNum
+            dirs = os.path.dirname(file).split('/')
+            for d in dirs:
+                if d == 'src':
+                    src_posNum += len(dic['line'])
+                    break
+                if d == 'lib':
+                    lib_posNum += len(dic['line'])
+                    break
+    return posNum, zeroNum, src_posNum, src_zeroNum, lib_posNum, lib_zeroNum
 
 
 def extract_coverage(lcov_file, log_file, cargs):
@@ -860,7 +880,7 @@ def init_tracking(cov_paths, cargs):
                 cov_paths['log_file'], cargs, LOG_ERRORS)
     if cargs.cov_all:
         with open(cov_paths['data_plot'], 'w') as fp:
-            fp.write("# unix_time, cov_rate, pos_lines, zero_lines \n")
+            fp.write("# unix_time, posNum, zeroNum, src_posNum, src_zeroNum, lib_posNum, lib_zeroNum \n")
     return True
 
 ### credit:
