@@ -1,6 +1,6 @@
 #! /bin/bash
 set -x
-set -e
+
 export OUTUPT_DIR=/output
 export CGC_SOURCE=/home/haochen/work/cgc/cb-multios_gcov
 export CONFIG_DIR=/workdir/env/config
@@ -16,7 +16,7 @@ function eval() {
     if [ -d ./cov ]; then
         rm -rf ./cov
     fi
-    /afl-cov/afl-cov -d $1 --coverage-cmd "${CGC_SOURCE}/${CB_NAME}_${VERSION}/build/challenges/${CB_NAME}/${CB_NAME} < AFL_FILE"  --code-dir ${CGC_SOURCE}/${CB_NAME}_${VERSION} --enable-branch-coverage --coverage-include-lines --clang --cov_all --overwrite
+    /afl-cov/afl-cov -d $1 --coverage-cmd "${CGC_SOURCE}/${CB_NAME}_${VERSION}/build/challenges/${CB_NAME}/${CB_NAME} < AFL_FILE"  --code-dir ${CGC_SOURCE}/${CB_NAME}_${VERSION} --enable-branch-coverage --coverage-include-lines --clang --cov_all --overwrite && kill -9 $(ps aux|grep "${CB_NAME}_${VERSION}" | awk '{print $2}')
 }
 
 cd /workdir
