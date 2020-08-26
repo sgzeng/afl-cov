@@ -13,6 +13,9 @@ function eval() {
     cd $OUTUPT_DIR/${NAME}_${VERSION}
     mv ./qsym/queue/* ./afl-master/queue
     rm -rf ./qsym
+    if [ -d ./cov ]; then
+        rm -rf ./cov
+    fi
     /afl-cov/afl-cov -d $1 --coverage-cmd "${CGC_SOURCE}/${CB_NAME}_${VERSION}/build/challenges/${CB_NAME}/${CB_NAME} < AFL_FILE"  --code-dir ${CGC_SOURCE}/${CB_NAME}_${VERSION} --enable-branch-coverage --coverage-include-lines --clang --cov_all --overwrite
 }
 
