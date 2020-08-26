@@ -184,9 +184,9 @@ def process_afl_test_cases(cargs):
                 ### for the current AFL test case file
                 cmd = cargs.coverage_cmd.replace('AFL_FILE', f)
                 if run_once:
-                    run_cmd(cmd, cov_paths['log_file'], cargs, NO_OUTPUT, ts=2)
+                    run_cmd(cmd, cov_paths['log_file'], cargs, NO_OUTPUT)
                 else:
-                    out_lines = run_cmd(cmd, cov_paths['log_file'], cargs, WANT_OUTPUT, ts=2)[1]
+                    out_lines = run_cmd(cmd, cov_paths['log_file'], cargs, WANT_OUTPUT)[1]
                     run_once = True
                 if cargs.afl_queue_id_limit \
                         and num_files >= cargs.afl_queue_id_limit - 1:
@@ -217,15 +217,10 @@ def process_afl_test_cases(cargs):
                     if cargs.cov_all:
                         posNum, zeroNum, src_posNum, src_zeroNum, lib_posNum, lib_zeroNum = compute_cov_rate(cov_paths, cargs)
                         seed_name = os.path.basename(f)
-                        if 'time' in seed_name:
-                            seed_info = seed_name.split(',')
-                            seed_time = seed_info[2].rpartition(':')[-1].strip()
-                            for info in seed_info:
-                                if 'time' in info:
-                                    seed_time = info.rpartition(':')[-1].strip()
-                            with open(cov_paths['data_plot'], 'a+') as df:
-                                plot_line = "%s, %d, %d, %d, %d, %d, %d \n" % (seed_time, posNum, zeroNum, src_posNum, src_zeroNum, lib_posNum, lib_zeroNum)
-                                df.write(plot_line)
+                        seed_time = str(int(os.path.getmtime(f)*1000))
+                        with open(cov_paths['data_plot'], 'a+') as df:
+                            plot_line = "%s, %d, %d, %d, %d, %d, %d \n" % (seed_time, posNum, zeroNum, src_posNum, src_zeroNum, lib_posNum, lib_zeroNum)
+                            df.write(plot_line)
                     ### log the output of the very first coverage command to
                     ### assist in troubleshooting
                     if len(out_lines):
@@ -816,7 +811,7 @@ def import_fuzzing_dirs(cov_paths, cargs):
     return True
 
 def import_test_cases(qdir):
-    return sorted(glob.glob(qdir + "/id:*"))
+    return sorted(glob.glob(qdir + "/id:*"), key=os.path.getmtime)
 
 def init_tracking(cov_paths, cargs):
 
