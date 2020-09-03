@@ -11,6 +11,8 @@ function eval() {
     NAME=$(echo $NAME_PATH | cut -d '/' -f 3)
     CB_NAME=$(python $CONFIG_DIR/cb_dic.py -n $NAME)
     cd $OUTUPT_DIR/${NAME}_${VERSION}
+    rm ./qsym/queue/*follow*
+    rm ./afl-master/queue/*
     mv ./qsym/queue/* ./afl-master/queue
     rm -rf ./qsym
     if [ -d ./cov ]; then
